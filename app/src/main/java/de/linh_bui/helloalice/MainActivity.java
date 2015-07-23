@@ -5,6 +5,10 @@ import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 
+import org.alicebot.ab.Bot;
+import org.alicebot.ab.Chat;
+
+import java.io.File;
 
 public class MainActivity extends Activity {
 
@@ -12,6 +16,28 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        File fileExt = new File(getExternalFilesDir(null).getAbsolutePath()+"/bots");
+
+        if(!fileExt.exists())
+        {
+            ZipFileExtraction extract = new ZipFileExtraction();
+
+            try
+            {
+                extract.unZipIt(getAssets().open("bots.zip"), getExternalFilesDir(null).getAbsolutePath()+"/");
+            } catch (Exception e) { e.printStackTrace(); }
+        }
+
+        String botname = "alice2";
+        String path = getExternalFilesDir(null).getAbsolutePath();
+        Bot alice = new Bot(botname,path);
+
+        Chat chatSession = new Chat(alice);
+
+        String request = "Hello.  Are you alive?  What is your name?";
+        String response = chatSession.multisentenceRespond(request);
+        System.out.println(response);
     }
 
     @Override
