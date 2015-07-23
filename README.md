@@ -1,2 +1,3 @@
 # HelloAlice
-# This is a project for my bachelor thesis.
+
+This is a project for my bachelor thesis.
