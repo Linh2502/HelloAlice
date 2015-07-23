@@ -45,7 +45,6 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
 
         chatSession = new Chat(alice);
 
-        tts = new TextToSpeech(this, this);
         txtSpeechInput = (TextView) findViewById(R.id.txtSpeechInput);
         btnSpeak = (ImageButton) findViewById(R.id.btnSpeak);
         btnSpeak.setOnClickListener(new View.OnClickListener() {
@@ -54,6 +53,22 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
                 googleSpeechInput();
             }
         });
+    }
+
+    @Override
+    protected void onStart(){
+        ttsInit();
+        super.onStart();
+    }
+
+    @Override
+    protected void onStop(){
+        tts.shutdown();
+        super.onStop();
+    }
+
+    public void ttsInit(){
+        tts = new TextToSpeech(this, this);
     }
 
     @Override
@@ -90,7 +105,6 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
 
     @Override
     public void onInit(int status) {
-
         if (status == TextToSpeech.SUCCESS) {
             int result = tts.setLanguage(Locale.US);
 
@@ -140,9 +154,10 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
                     ArrayList<String> result = data
                             .getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
                     txtSpeechInput.setText(result.get(0));
-                    //String response = chatSession.multisentenceRespond(result.get(0));
-                    googleSpeechOutput(result.get(0));
+                    String response = chatSession.multisentenceRespond(result.get(0));
+                    //String response = result.get(0);
                     //txtSpeechOutput.setText(response);
+                    googleSpeechOutput(response);
                     //String request = "Hello.  Are you alive?  What is your name?";
                 }
                 break;
