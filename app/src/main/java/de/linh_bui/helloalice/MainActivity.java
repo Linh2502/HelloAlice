@@ -1,74 +1,72 @@
 package de.linh_bui.helloalice;
 
-import android.annotation.TargetApi;
 import android.app.Activity;
-import android.content.ActivityNotFoundException;
 import android.content.Intent;
-import android.os.Build;
+import android.content.IntentSender;
 import android.os.Bundle;
-import android.speech.RecognizerIntent;
-import android.speech.tts.TextToSpeech;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.TextView;
-import android.widget.Toast;
+
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GooglePlayServicesUtil;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.drive.Drive;
 
 import org.alicebot.ab.Bot;
 import org.alicebot.ab.Chat;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Locale;
 
-public class MainActivity extends Activity implements TextToSpeech.OnInitListener{
+public class MainActivity extends Activity implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
     private Bot alice;
     private Chat chatSession;
+    private GoogleApiClient apiClient;
+    private GoogleService service;
     private ImageButton btnSpeak;
     private String botName = "alice2";
     private String path;
-    private TextToSpeech tts;
     private TextView txtSpeechInput;
-    private TextView txtSpeechOutput;
-    private final int REQ_CODE_SPEECH_INPUT = 100;
+    private final int RESOLVE_CONNECTION_REQUEST_CODE = 100;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        setup();
         extractZipFile();
 
-        path = getExternalFilesDir(null).getAbsolutePath();
-        alice = new Bot(botName,path);
-
-        chatSession = new Chat(alice);
-
-        txtSpeechInput = (TextView) findViewById(R.id.txtSpeechInput);
-        btnSpeak = (ImageButton) findViewById(R.id.btnSpeak);
         btnSpeak.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                googleSpeechInput();
+                service.voiceInput();
             }
         });
+
     }
 
     @Override
-    protected void onStart(){
-        ttsInit();
+    protected void onStart() {
+        service.ttsInit();
         super.onStart();
+        apiClient.connect();
     }
 
     @Override
-    protected void onStop(){
-        tts.shutdown();
+    protected void onStop() {
+        service.ttsStop();
         super.onStop();
     }
 
-    public void ttsInit(){
-        tts = new TextToSpeech(this, this);
+    @Override
+    public void onDestroy() {
+        // Destroy tts
+        if (service.getTTS() != null) {
+            service.ttsStop();
+        }
+        super.onDestroy();
     }
 
     @Override
@@ -94,95 +92,68 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
     }
 
     @Override
-    public void onDestroy() {
-        // Destroy tts
-        if (tts != null) {
-            tts.stop();
-            tts.shutdown();
-        }
-        super.onDestroy();
-    }
-
-    @Override
-    public void onInit(int status) {
-        if (status == TextToSpeech.SUCCESS) {
-            int result = tts.setLanguage(Locale.US);
-
-            if (result == TextToSpeech.LANG_MISSING_DATA
-                    || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                Intent installIntent = new Intent();
-                installIntent.setAction(
-                        TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA);
-                startActivity(installIntent);
-                Log.e("TTS", "This Language is not supported");
-            } else {
-            }
-
-        } else {
-            Log.e("TTS", "Initialization Failed!");
-        }
-
-    }
-
-    private void googleSpeechInput() {
-        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
-        intent.putExtra(RecognizerIntent.EXTRA_PROMPT,
-                getString(R.string.speech_prompt));
-        try {
-            startActivityForResult(intent, REQ_CODE_SPEECH_INPUT);
-        } catch (ActivityNotFoundException a) {
-            Toast.makeText(getApplicationContext(),
-                    getString(R.string.speech_not_supported),
-                    Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    /**
-     * Receiving speech input
-     * */
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-
+    protected void onActivityResult(final int requestCode, final int resultCode, final Intent data) {
         switch (requestCode) {
-            case REQ_CODE_SPEECH_INPUT: {
-                if (resultCode == RESULT_OK && null != data) {
-
-                    ArrayList<String> result = data
-                            .getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
-                    txtSpeechInput.setText(result.get(0));
-                    String response = chatSession.multisentenceRespond(result.get(0));
-                    //String response = result.get(0);
-                    //txtSpeechOutput.setText(response);
-                    googleSpeechOutput(response);
-                    //String request = "Hello.  Are you alive?  What is your name?";
+            case RESOLVE_CONNECTION_REQUEST_CODE:
+                if (resultCode == RESULT_OK) {
+                    apiClient.connect();
                 }
                 break;
-            }
-
         }
     }
 
-    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    private void googleSpeechOutput(String text) {
-        CharSequence output = text;
-        tts.speak(output, TextToSpeech.QUEUE_FLUSH, null, null);
+    private void setup() {
+        path = getExternalFilesDir(null).getAbsolutePath();
+        alice = new Bot(botName, path);
+        chatSession = new Chat(alice);
+        txtSpeechInput = (TextView) findViewById(R.id.txtSpeechInput);
+        btnSpeak = (ImageButton) findViewById(R.id.btnSpeak);
+
+        service = new GoogleService();
+        service.setup(chatSession, txtSpeechInput);
+
+        apiClient = new GoogleApiClient.Builder(this)
+                .addApi(Drive.API)
+                .addScope(Drive.SCOPE_FILE)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .build();
     }
 
-    private void extractZipFile(){
-        File fileExt = new File(getExternalFilesDir(null).getAbsolutePath()+"/bots");
+    private void extractZipFile() {
+        File fileExt = new File(getExternalFilesDir(null).getAbsolutePath() + "/bots");
 
-        if(!fileExt.exists())
-        {
+        if (!fileExt.exists()) {
             ZipFileExtraction extract = new ZipFileExtraction();
 
-            try
-            {
-                extract.unZipIt(getAssets().open("bots.zip"), getExternalFilesDir(null).getAbsolutePath()+"/");
-            } catch (Exception e) { e.printStackTrace(); }
+            try {
+                extract.unZipIt(getAssets().open("bots.zip"), getExternalFilesDir(null).getAbsolutePath() + "/");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    @Override
+    public void onConnected(Bundle bundle) {
+
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
+
+    }
+
+    @Override
+    public void onConnectionFailed(ConnectionResult connectionResult) {
+        if (connectionResult.hasResolution()) {
+            try {
+                connectionResult.startResolutionForResult(this, RESOLVE_CONNECTION_REQUEST_CODE);
+            } catch (IntentSender.SendIntentException e) {
+                // Unable to resolve, message user appropriately
+            }
+        } else {
+            GooglePlayServicesUtil.getErrorDialog(connectionResult.getErrorCode(), this, 0).show();
         }
     }
 }
