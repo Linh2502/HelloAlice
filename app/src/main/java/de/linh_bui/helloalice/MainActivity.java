@@ -2,7 +2,6 @@ package de.linh_bui.helloalice;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.content.IntentSender;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -10,26 +9,20 @@ import android.view.View;
 import android.widget.ImageButton;
 import android.widget.TextView;
 
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GooglePlayServicesUtil;
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.drive.Drive;
-
 import org.alicebot.ab.Bot;
 import org.alicebot.ab.Chat;
 
 import java.io.File;
 
-public class MainActivity extends Activity implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
+public class MainActivity extends Activity{
     private Bot alice;
     private Chat chatSession;
-    private GoogleApiClient apiClient;
     private GoogleService service;
     private ImageButton btnSpeak;
     private String botName = "alice2";
     private String path;
     private TextView txtSpeechInput;
-    private final int RESOLVE_CONNECTION_REQUEST_CODE = 100;
+    static final int RESULT_CODE = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,7 +44,6 @@ public class MainActivity extends Activity implements GoogleApiClient.Connection
     protected void onStart() {
         service.ttsInit();
         super.onStart();
-        apiClient.connect();
     }
 
     @Override
@@ -91,17 +83,6 @@ public class MainActivity extends Activity implements GoogleApiClient.Connection
         return super.onOptionsItemSelected(item);
     }
 
-    @Override
-    protected void onActivityResult(final int requestCode, final int resultCode, final Intent data) {
-        switch (requestCode) {
-            case RESOLVE_CONNECTION_REQUEST_CODE:
-                if (resultCode == RESULT_OK) {
-                    apiClient.connect();
-                }
-                break;
-        }
-    }
-
     private void setup() {
         path = getExternalFilesDir(null).getAbsolutePath();
         alice = new Bot(botName, path);
@@ -112,12 +93,8 @@ public class MainActivity extends Activity implements GoogleApiClient.Connection
         service = new GoogleService();
         service.setup(chatSession, txtSpeechInput);
 
-        apiClient = new GoogleApiClient.Builder(this)
-                .addApi(Drive.API)
-                .addScope(Drive.SCOPE_FILE)
-                .addConnectionCallbacks(this)
-                .addOnConnectionFailedListener(this)
-                .build();
+        Intent syncData = new Intent(this, ContentSynchronization.class);
+        startActivityForResult(syncData, RESULT_CODE);
     }
 
     private void extractZipFile() {
@@ -135,25 +112,20 @@ public class MainActivity extends Activity implements GoogleApiClient.Connection
     }
 
     @Override
-    public void onConnected(Bundle bundle) {
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        // Check which request we're responding to
+        if (requestCode == RESULT_CODE) {
+            // Make sure the request was successful
+            if (resultCode == RESULT_OK) {
+                // The user picked a contact.
+                // The Intent's data Uri identifies which contact was selected.
 
-    }
-
-    @Override
-    public void onConnectionSuspended(int i) {
-
-    }
-
-    @Override
-    public void onConnectionFailed(ConnectionResult connectionResult) {
-        if (connectionResult.hasResolution()) {
-            try {
-                connectionResult.startResolutionForResult(this, RESOLVE_CONNECTION_REQUEST_CODE);
-            } catch (IntentSender.SendIntentException e) {
-                // Unable to resolve, message user appropriately
+                // Do something with the contact here (bigger example below)
+            }else{
+                System.out.println("Error ResultOK");
             }
-        } else {
-            GooglePlayServicesUtil.getErrorDialog(connectionResult.getErrorCode(), this, 0).show();
+        }else{
+            System.out.println("Error ResultCode");
         }
     }
 }
