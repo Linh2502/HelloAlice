@@ -1,5 +1,7 @@
 package de.linh_bui.helloalice;
 
+import android.util.Log;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
@@ -29,12 +31,14 @@ public class ZipFileExtraction
                     if (!dir.exists()) {
                         dir.mkdir();
                     }
+                    Log.d("+++++++++++Zip Extractor" , "[DIR] " + entry.getName());
                 } else {
                     FileOutputStream fos = new FileOutputStream(outputFolder + entry.getName());
                     while ((bytesRead = zin.read(buffer)) != -1) {
                         fos.write(buffer, 0, bytesRead);
                     }
                     fos.close();
+                    Log.d("+++++++++++Zip Extractor" , "[FILE] " + entry.getName());
                 }
             }
             zin.close();

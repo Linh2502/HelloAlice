@@ -8,6 +8,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.speech.RecognizerIntent;
 import android.speech.tts.TextToSpeech;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -21,8 +22,8 @@ import java.util.ArrayList;
 import java.util.Locale;
 
 public class MainActivity extends Activity implements TextToSpeech.OnInitListener {
-    private ModBot alice;
     private Chat chatSession;
+    private ModBot alice;
     private ImageButton btnSpeak;
     private TextToSpeech tts;
     private TextView txtSpeechInput;
@@ -44,10 +45,9 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
     private void setup() {
         Intent i = getIntent();
         alice = i.getParcelableExtra("alice");
-        chatSession = new Chat(alice);
+        chatSession = new ModChat(alice);
         txtSpeechInput = (TextView) findViewById(R.id.txtSpeechInput);
         btnSpeak = (ImageButton) findViewById(R.id.btnSpeak);
-        txtSpeechInput.setText(alice.config_path + "/" + alice.bot_name_path + "\n" + alice.aiml_path + "/" + alice.name + "\n" + getExternalFilesDir(null).getAbsolutePath());
 
         ttsInit();
 
@@ -96,11 +96,25 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
         if (id == R.id.action_settings) {
             return true;
         }
-
         return super.onOptionsItemSelected(item);
     }
 
     public void onInit(int status) {
+        if (status == TextToSpeech.SUCCESS) {
+            int result = tts.setLanguage(Locale.ENGLISH);
+
+            if (result == TextToSpeech.LANG_MISSING_DATA
+                    || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                Intent installIntent = new Intent();
+                installIntent.setAction(
+                        TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA);
+                startActivity(installIntent);
+                Log.e("TTS", "This Language is not supported");
+            } else {
+            }
+        } else {
+            Log.e("TTS", "Initialization Failed!");
+        }
     }
 
     public void voiceInput() {
@@ -132,7 +146,6 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
                 }
                 break;
             }
-
         }
     }
 

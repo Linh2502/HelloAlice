@@ -10,18 +10,30 @@ import org.alicebot.ab.Bot;
  */
 public class ModBot extends Bot implements Parcelable{
 
-    private String botName;
-    private String path;
-
-    public ModBot() { }
-
-    public ModBot(Parcel input){
-        botName = input.readString();
-        path = input.readString();
-    }
+    private String bot_path;
+    private String bot_name_path;
 
     public ModBot(String botName, String path){
         super(botName, path);
+    }
+
+    public ModBot() {
+    }
+
+    public String getBot_path() {
+        return bot_path;
+    }
+
+    public void setBot_path(String bot_path) {
+        this.bot_path = bot_path;
+    }
+
+    public String getBot_name_path() {
+        return bot_name_path;
+    }
+
+    public void setBot_name_path(String bot_name_path) {
+        this.bot_name_path = bot_name_path;
     }
 
     @Override
@@ -31,15 +43,21 @@ public class ModBot extends Bot implements Parcelable{
 
     @Override
     public void writeToParcel(Parcel dest, int flags) {
-        dest.writeString(botName);
-        dest.writeString(path);
+        dest.writeString(this.bot_path);
+        dest.writeString(this.bot_name_path);
     }
 
-    public static final Parcelable.Creator<ModBot> CREATOR = new Parcelable.Creator<ModBot>(){
-        public ModBot createFromParcel(Parcel input){
-            return new ModBot(input);
+    private ModBot(Parcel in) {
+        this.bot_path = in.readString();
+        this.bot_name_path = in.readString();
+    }
+
+    public static final Creator<ModBot> CREATOR = new Creator<ModBot>() {
+        public ModBot createFromParcel(Parcel source) {
+            return new ModBot(source);
         }
-        public ModBot[] newArray(int size){
+
+        public ModBot[] newArray(int size) {
             return new ModBot[size];
         }
     };

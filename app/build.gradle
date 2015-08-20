@@ -19,7 +19,11 @@ android {
     }
 }
 
+
+
 dependencies {
+    compile 'com.android.support:support-v4:22.1.1'
+    compile 'com.google.code.ksoap2-android:ksoap2-android:3.4.0'
     compile fileTree(dir: 'libs', include: ['*.jar'])
     compile 'com.android.support:appcompat-v7:22.2.0'
     compile 'com.google.android.gms:play-services:7.5.0'
