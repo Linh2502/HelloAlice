@@ -12,19 +12,13 @@ public class ModChat extends Chat implements Parcelable{
 
     private ModBot classBot;
 
-    public ModBot getClassBot() {
-        return classBot;
-    }
-
-    public void setClassBot(ModBot classBot) {
-        this.classBot = classBot;
-    }
-
     public ModChat(ModBot bot){
         super(bot);
+        this.classBot = bot;
     }
 
-    public ModChat() {
+    public ModBot getClassBot(){
+        return classBot;
     }
 
     @Override
@@ -34,10 +28,10 @@ public class ModChat extends Chat implements Parcelable{
 
     @Override
     public void writeToParcel(Parcel dest, int flags) {
-        dest.writeParcelable(this.classBot, 0);
+        dest.writeParcelable(this.classBot, flags);
     }
 
-    private ModChat(Parcel in) {
+    private ModChat (Parcel in) {
         this.classBot = in.readParcelable(ModBot.class.getClassLoader());
     }
 

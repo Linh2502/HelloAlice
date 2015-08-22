@@ -10,30 +10,21 @@ import org.alicebot.ab.Bot;
  */
 public class ModBot extends Bot implements Parcelable{
 
-    private String bot_path;
-    private String bot_name_path;
+    private String botName;
+    private String path;
 
     public ModBot(String botName, String path){
         super(botName, path);
+        this.botName = botName;
+        this.path = path;
     }
 
-    public ModBot() {
+    public String getBotName(){
+        return botName;
     }
 
-    public String getBot_path() {
-        return bot_path;
-    }
-
-    public void setBot_path(String bot_path) {
-        this.bot_path = bot_path;
-    }
-
-    public String getBot_name_path() {
-        return bot_name_path;
-    }
-
-    public void setBot_name_path(String bot_name_path) {
-        this.bot_name_path = bot_name_path;
+    public String getPath(){
+        return path;
     }
 
     @Override
@@ -43,13 +34,14 @@ public class ModBot extends Bot implements Parcelable{
 
     @Override
     public void writeToParcel(Parcel dest, int flags) {
-        dest.writeString(this.bot_path);
-        dest.writeString(this.bot_name_path);
+        dest.writeString(this.botName);
+        dest.writeString(this.path);
     }
 
-    private ModBot(Parcel in) {
-        this.bot_path = in.readString();
-        this.bot_name_path = in.readString();
+    private ModBot (Parcel in) {
+        super(in.readString(), in.readString());
+        this.botName = in.readString();
+        this.path = in.readString();
     }
 
     public static final Creator<ModBot> CREATOR = new Creator<ModBot>() {

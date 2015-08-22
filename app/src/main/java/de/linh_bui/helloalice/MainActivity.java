@@ -4,6 +4,7 @@ import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.speech.RecognizerIntent;
@@ -13,22 +14,24 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import org.alicebot.ab.Chat;
 
 import java.util.ArrayList;
 import java.util.Locale;
 
 public class MainActivity extends Activity implements TextToSpeech.OnInitListener {
-    private Chat chatSession;
     private ModBot alice;
+    private ModChat chatSession;
     private ImageButton btnSpeak;
     private TextToSpeech tts;
     private TextView txtSpeechInput;
+    private TextView txtChat;
+    private ProgressBar progressBar;
+    private LinearLayout mainLayout;
     private final int REQ_CODE_SPEECH_INPUT = 100;
-    private final int RESULT_CODE = 1;
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -43,16 +46,41 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
     }
 
     private void setup() {
-        Intent i = getIntent();
-        alice = i.getParcelableExtra("alice");
-        chatSession = new ModChat(alice);
+        txtChat = (TextView) findViewById(R.id.txtChat);
+        progressBar = (ProgressBar) findViewById(R.id.progressBar);
         txtSpeechInput = (TextView) findViewById(R.id.txtSpeechInput);
         btnSpeak = (ImageButton) findViewById(R.id.btnSpeak);
+        mainLayout = (LinearLayout) findViewById(R.id.mainLayout);
 
         ttsInit();
+        setupChat();
+    }
 
-        //Intent syncData = new Intent(this, ContentSynchronization.class);
-        //startActivityForResult(syncData, RESULT_CODE);
+    private void setupChat(){
+        new AsyncTask<Void, Void, Boolean>(){
+            @Override
+            protected Boolean doInBackground(Void... params) {
+                try {
+                    Intent i = getIntent();
+                    alice = i.getParcelableExtra("alice");
+                    chatSession = new ModChat(alice);
+                    return true;
+                } catch (Exception e){
+                    Log.e("Error loading Chat", "error", e);
+                    return false;
+                }
+            }
+            protected void onPostExecute(Boolean response){
+                if(response){
+                    txtChat.setVisibility(View.INVISIBLE);
+                    progressBar.setVisibility(View.INVISIBLE);
+                    txtSpeechInput.setVisibility(View.VISIBLE);
+                    mainLayout.setVisibility(View.VISIBLE);
+                }else{
+                    setupChat();
+                }
+            }
+        }.execute();
     }
 
     public void ttsInit() {
@@ -81,41 +109,20 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
     }
 
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
     }
 
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
-        //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
             return true;
         }
         return super.onOptionsItemSelected(item);
     }
 
-    public void onInit(int status) {
-        if (status == TextToSpeech.SUCCESS) {
-            int result = tts.setLanguage(Locale.ENGLISH);
-
-            if (result == TextToSpeech.LANG_MISSING_DATA
-                    || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                Intent installIntent = new Intent();
-                installIntent.setAction(
-                        TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA);
-                startActivity(installIntent);
-                Log.e("TTS", "This Language is not supported");
-            } else {
-            }
-        } else {
-            Log.e("TTS", "Initialization Failed!");
-        }
-    }
+    public void onInit(int status) { }
 
     public void voiceInput() {
         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
