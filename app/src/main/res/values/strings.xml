@@ -10,4 +10,6 @@
     <string name="status_progress">Please wait while app is preparing...</string>
     <string name="tap_on_mic">Tap on mic to speak</string>
     <string name="status_chat">Chat is initializing...</string>
+    <string name="status_botProgress">Loading Bot...</string>
+    <string name="status_chatProgress">Chat is initializing...</string>
 </resources>
