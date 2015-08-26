@@ -1,7 +1,10 @@
 package de.linh_bui.helloalice;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
@@ -20,10 +23,24 @@ public class PreActivity extends Activity implements TextToSpeech.OnInitListener
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_progress);
         path = getExternalFilesDir(null).getAbsolutePath();
-        downloadZip();
-        extractZipFile();
         ttsInit();
-        callMainActivity();
+        checkConnectionToInternet();
+    }
+
+    protected void checkConnectionToInternet(){
+        if(isOnline()){
+            downloadZip();
+            extractZipFile();
+            callOnlineActivity();
+        } else {
+            callOfflineActivity();
+        }
+    }
+
+    public boolean isOnline() {
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo netInfo = cm.getActiveNetworkInfo();
+        return netInfo != null && netInfo.isConnectedOrConnecting();
     }
 
     private void downloadZip(){
@@ -49,9 +66,14 @@ public class PreActivity extends Activity implements TextToSpeech.OnInitListener
         tts = new TextToSpeech(this, this);
     }
 
-    public void callMainActivity(){
-        Intent startMainActivity = new Intent(this, MainActivity.class);
-        startActivity(startMainActivity);
+    public void callOnlineActivity(){
+        Intent startOnlineActivity = new Intent(this, OnlineActivity.class);
+        startActivity(startOnlineActivity);
+    }
+
+    public void callOfflineActivity(){
+        Intent startOfflineActivity = new Intent(this, MainActivity.class);
+        startActivity(startOfflineActivity);
     }
 
     @Override

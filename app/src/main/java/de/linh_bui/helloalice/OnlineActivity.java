@@ -4,7 +4,6 @@ import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.speech.RecognizerIntent;
@@ -12,23 +11,20 @@ import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageButton;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Locale;
 
-public class MainActivity extends Activity implements TextToSpeech.OnInitListener {
-    private ModBot alice;
-    private ModChat chatSession;
-    private Intent botData;
-    private Intent chatData;
+/**
+ * Created by Linh on 25.08.15.
+ */
+public class OnlineActivity extends Activity implements TextToSpeech.OnInitListener{
     private ImageButton btnSpeak;
     private TextToSpeech tts;
     private TextView txtSpeechInput;
-    private TextView txtChat;
-    private ProgressBar progressBar;
+    private WebService webService;
     private final int REQ_CODE_SPEECH_INPUT = 100;
 
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,66 +64,7 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
     private void setup() {
         txtSpeechInput = (TextView) findViewById(R.id.txtSpeechInput);
         btnSpeak = (ImageButton) findViewById(R.id.btnSpeak);
-
         ttsInit();
-        initializeBot();
-    }
-
-    private void initializeBot(){
-        Intent i = new Intent(this, LoadBot.class);
-        startActivityForResult(i, 1);
-    }
-
-    @Deprecated
-    private void initializeChat(){
-        Intent i = new Intent(this, LoadChat.class);
-        i.putExtra("botName", alice.name);
-        i.putExtra("path", alice.root_path);
-        startActivityForResult(i, 2);
-    }
-
-    private void loadBot(){
-        new AsyncTask<Void, Void, Boolean>(){
-            @Override
-            protected Boolean doInBackground(Void... params) {
-                try {
-                    alice = botData.getParcelableExtra("bot");
-                    return true;
-                } catch (Exception e){
-                    Log.e("Error loading Bot", "error", e);
-                    return false;
-                }
-            }
-            protected void onPostExecute(Boolean response){
-                if(response){
-                    loadChat();
-                }else{
-                    Log.e("Error loading, attempt to reconnect", "error");
-                }
-            }
-        }.execute();
-    }
-
-    private void loadChat(){
-        new AsyncTask<Void, Void, Boolean>(){
-            @Override
-            protected Boolean doInBackground(Void... params) {
-                try {
-                    chatSession = new ModChat(alice);
-                    return true;
-                } catch (Exception e){
-                    Log.e("Error loading Bot", "error", e);
-                    return false;
-                }
-            }
-            protected void onPostExecute(Boolean response){
-                if(response){
-                    Log.e("Chat", "load chat success");
-                }else{
-                    Log.e("Error loading, attempt to reconnect", "error");
-                }
-            }
-        }.execute();
     }
 
     public void voiceInput() {
@@ -149,27 +86,23 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         switch (requestCode) {
-            case 1: {
-                if (resultCode == RESULT_OK) {
-                    this.botData = data;
-                    loadBot();
-                }
-                break;
-            }
-            case 2: {
-                if(resultCode == RESULT_OK){
-                    this.chatData = data;
-                    loadChat();
-                }
-                break;
-            }
             case REQ_CODE_SPEECH_INPUT: {
                 if (resultCode == RESULT_OK && null != data) {
                     ArrayList<String> result = data
                             .getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
-                    String response = chatSession.multisentenceRespond(result.get(0));
+                    String input = result.get(0);
+                    String response = null;
+                    try {
+                        Log.e("Service", "send message to web service");
+                        webService = new WebService();
+                        response = webService.execute(input).get();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                     voiceOutput(response);
                     txtSpeechInput.setText("Input: " + result.get(0) + "\n" + "Output: " + response);
+                } else {
+                    voiceOutput("Error");
                 }
                 break;
             }
