@@ -3,17 +3,17 @@ package de.linh_bui.helloalice;
 import android.os.AsyncTask;
 import android.util.Log;
 
-import java.io.BufferedWriter;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.Scanner;
 
 /**
  * Created by Linh on 26.08.15.
  */
 public class WebService extends AsyncTask<String, Void, String>{
-    private String response = "Test";
+    private String response = "Ich habe dich nicht verstanden";
     protected String doInBackground(String... params) {
         try{
             Log.e("Service", "call url");
@@ -21,20 +21,25 @@ public class WebService extends AsyncTask<String, Void, String>{
             HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
             urlConnection.setChunkedStreamingMode(0);
             urlConnection.setRequestMethod("POST");
+            urlConnection.setDoInput(true);
             urlConnection.setDoOutput(true);
+            urlConnection.setRequestProperty("Content-Type", "text/plain;charset=ISO-8859-1");
+            urlConnection.setRequestProperty("Content-length", String.valueOf(params[0].length()));
 
-            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(urlConnection.getOutputStream()));
-            bw.write(params[0]);
-            bw.close();
-            Log.e("Input", params[0]);
+            ReplaceSpecialCharacter newString = new ReplaceSpecialCharacter();
+            OutputStreamWriter writer = new OutputStreamWriter(urlConnection.getOutputStream(), "UTF-8");
+            writer.write(newString.replaceSpecialCharacter(params[0]));
+            writer.flush();
 
-            Scanner scanner = new Scanner(urlConnection.getInputStream());
-            while(scanner.hasNextLine()){
-                Log.e("Service", "save response");
-                response = scanner.nextLine();
-                Log.e("Service", "response is: " + response);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
+            for ( String line; (line = reader.readLine()) != null; )
+            {
+                response = line;
             }
-            scanner.close();
+
+            writer.close();
+            reader.close();
+
             return response;
         } catch (Exception e){
             e.printStackTrace();
