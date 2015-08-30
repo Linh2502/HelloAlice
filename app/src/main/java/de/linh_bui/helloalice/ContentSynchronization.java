@@ -1,130 +1,107 @@
-/**
- * Copyright 2013 Google Inc. All Rights Reserved.
- * <p/>
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License. You may obtain a copy of the License at
- * <p/>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p/>
- * Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-
 package de.linh_bui.helloalice;
 
+import android.app.Activity;
 import android.content.Intent;
-import android.content.IntentSender;
-import android.content.IntentSender.SendIntentException;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
-import android.widget.ProgressBar;
+import android.widget.TextView;
 
-import com.google.android.gms.common.api.ResultCallback;
-import com.google.android.gms.drive.Drive;
-import com.google.android.gms.drive.DriveApi.DriveContentsResult;
-import com.google.android.gms.drive.DriveFile;
-import com.google.android.gms.drive.DriveFile.DownloadProgressListener;
-import com.google.android.gms.drive.DriveId;
-import com.google.android.gms.drive.OpenFileActivityBuilder;
+import com.dropbox.client2.DropboxAPI;
+import com.dropbox.client2.android.AndroidAuthSession;
+import com.dropbox.client2.exception.DropboxException;
+import com.dropbox.client2.session.AppKeyPair;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by Linh on 13.08.15.
  */
+public class ContentSynchronization extends Activity {
+    private String dropboxAppKey;
+    private String dropboxAppSecret;
+    private String dropboxAccessToken;
+    private String path;
+    private DropboxAPI<AndroidAuthSession> mDBApi;
+    private TextView txtDownload;
+    private static final ScheduledExecutorService worker =
+            Executors.newSingleThreadScheduledExecutor();
 
-/**
- * An activity to illustrate how to open contents and listen
- * the download progress if the file is not already sync'ed.
- */
-public class ContentSynchronization extends GoogleDrive {
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_download);
+        txtDownload = (TextView) findViewById(R.id.txtDownload);
+        path = getExternalFilesDir(null).getAbsolutePath();
 
-    private static final String TAG = "RetrieveFileWithProgressDialogActivity";
-
-    /**
-     * Request code to handle the result from file opening activity.
-     */
-    private static final int REQUEST_CODE_OPENER = 1;
-
-    /**
-     * Progress bar to show the current download progress of the file.
-     */
-    private ProgressBar mProgressBar;
-
-    /**
-     * File that is selected with the open file activity.
-     */
-    private DriveId mSelectedFileDriveId;
-
-    @Override
-    protected void onCreate(Bundle b) {
-        super.onCreate(b);
-        setContentView(R.layout.activity_progress);
-        mProgressBar = (ProgressBar) findViewById(R.id.progressBar);
-        mProgressBar.setMax(100);
+        getKeys();
+        setupAuthentication();
     }
 
-    @Override
-    public void onConnected(Bundle connectionHint) {
-        super.onConnected(connectionHint);
+    public ContentSynchronization(){}
 
-        // If there is a selected file, open its contents.
-        if (mSelectedFileDriveId != null) {
-            open();
-            return;
-        }
+    private void getKeys(){
+        DropBoxConfiguration config = new DropBoxConfiguration();
+        dropboxAppKey = config.getDropBoxAppKey();
+        dropboxAppSecret = config.getDropBoxAppSecret();
+        dropboxAccessToken = config.getDropBoxAccessToken();
+    }
 
-        // Let the user pick an mp4 or a jpeg file if there are
-        // no files selected by the user.
-        IntentSender intentSender = Drive.DriveApi
-                .newOpenFileActivityBuilder()
-                .setMimeType(new String[]{"video/mp4", "image/jpeg"})
-                .build(getGoogleApiClient());
+    private void setupAuthentication(){
+        AppKeyPair appKeys = new AppKeyPair(dropboxAppKey, dropboxAppSecret);
+        AndroidAuthSession session = new AndroidAuthSession(appKeys);
+        mDBApi = new DropboxAPI<>(session);
+        mDBApi.getSession().setOAuth2AccessToken(dropboxAccessToken);
         try {
-            startIntentSenderForResult(intentSender, REQUEST_CODE_OPENER, null, 0, 0, 0);
-        } catch (SendIntentException e) {
-            Log.w(TAG, "Unable to send intent", e);
+            downloadFile();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (DropboxException e) {
+            e.printStackTrace();
         }
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == REQUEST_CODE_OPENER && resultCode == RESULT_OK) {
-            mSelectedFileDriveId = (DriveId) data.getParcelableExtra(
-                    OpenFileActivityBuilder.EXTRA_RESPONSE_DRIVE_ID);
-        } else {
-            super.onActivityResult(requestCode, resultCode, data);
-        }
-    }
-
-    private void open() {
-        // Reset progress dialog back to zero as we're
-        // initiating an opening request.
-        mProgressBar.setProgress(0);
-        DownloadProgressListener listener = new DownloadProgressListener() {
+    private void downloadFile() throws FileNotFoundException, DropboxException {
+        new AsyncTask<Void, Void, Boolean>(){
             @Override
-            public void onProgress(long bytesDownloaded, long bytesExpected) {
-                // Update progress dialog with the latest progress.
-                int progress = (int) (bytesDownloaded * 100 / bytesExpected);
-                Log.d(TAG, String.format("Loading progress: %d percent", progress));
-                mProgressBar.setProgress(progress);
+            protected Boolean doInBackground(Void... params) {
+                try {
+                    File file = new File(path + "/bots.zip");
+                    FileOutputStream outputStream = new FileOutputStream(file);
+                    DropboxAPI.DropboxFileInfo info = mDBApi.getFile("/bots.zip", null, outputStream, null);
+                    Log.e("DbExampleLog", "The file's rev is: " + info.getMetadata().rev);
+                    return true;
+                } catch (Exception e){
+                    return false;
+                }
+            }
+            protected void onPostExecute(Boolean response){
+                if(response){
+                    callBack();
+                }else{
+                    shutDown();
+                }
+            }
+        }.execute();
+    }
+
+    private void callBack(){
+        Intent returnIntent = new Intent();
+        setResult(RESULT_OK,returnIntent);
+        finish();
+    }
+
+    private void shutDown(){
+        txtDownload.setText("Error downloading bot data, attempt to shut down app...");
+        Runnable task = new Runnable() {
+            public void run() {
+                android.os.Process.killProcess(android.os.Process.myPid());
             }
         };
-        Drive.DriveApi.getFile(getGoogleApiClient(), mSelectedFileDriveId)
-                .open(getGoogleApiClient(), DriveFile.MODE_READ_ONLY, listener)
-                .setResultCallback(driveContentsCallback);
-        mSelectedFileDriveId = null;
+        worker.schedule(task, 3, TimeUnit.SECONDS);
     }
-
-    private ResultCallback<DriveContentsResult> driveContentsCallback = new ResultCallback<DriveContentsResult>() {
-        @Override
-        public void onResult(DriveContentsResult result) {
-            if (!result.getStatus().isSuccess()) {
-                showMessage("Error while opening the file contents");
-                return;
-            }
-            showMessage("File contents opened");
-        }
-    };
 }

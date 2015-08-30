@@ -18,9 +18,7 @@ public class ZipFileExtraction
     {
         try
         {
-            //get the zip file content
             ZipInputStream zin = new ZipInputStream(zipFile);
-            //get the zipped file list entry
             ZipEntry entry;
             int bytesRead;
             byte[] buffer = new byte[4096];

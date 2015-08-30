@@ -12,4 +12,5 @@
     <string name="status_chat">Chat is initializing...</string>
     <string name="status_botProgress">Loading Bot...</string>
     <string name="status_chatProgress">Chat is initializing...</string>
+    <string name="status_zipProgress">Downloading bot data...</string>
 </resources>

@@ -30,8 +30,6 @@ public class PreActivity extends Activity implements TextToSpeech.OnInitListener
     protected void checkConnectionToInternet(){
         if(isOnline()){
             downloadZip();
-            extractZipFile();
-            callOnlineActivity();
         } else {
             callOfflineActivity();
         }
@@ -44,8 +42,8 @@ public class PreActivity extends Activity implements TextToSpeech.OnInitListener
     }
 
     private void downloadZip(){
-        //Intent syncData = new Intent(this, ContentSynchronization.class);
-        //startActivityForResult(syncData, RESULT_CODE);
+        Intent syncData = new Intent(this, ContentSynchronization.class);
+        startActivityForResult(syncData, 1);
     }
 
     private void extractZipFile() {
@@ -72,14 +70,14 @@ public class PreActivity extends Activity implements TextToSpeech.OnInitListener
     }
 
     public void callOfflineActivity(){
-        Intent startOfflineActivity = new Intent(this, MainActivity.class);
+        Intent startOfflineActivity = new Intent(this, OfflineActivity.class);
         startActivity(startOfflineActivity);
     }
 
     @Override
     public void onInit(int status) {
         if (status == TextToSpeech.SUCCESS) {
-            int result = tts.setLanguage(Locale.GERMAN);
+            int result = tts.setLanguage(Locale.getDefault());
 
             if (result == TextToSpeech.LANG_MISSING_DATA
                     || result == TextToSpeech.LANG_NOT_SUPPORTED) {
@@ -92,6 +90,19 @@ public class PreActivity extends Activity implements TextToSpeech.OnInitListener
             }
         } else {
             Log.e("TTS", "Initialization Failed!");
+        }
+    }
+
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        switch (requestCode) {
+            case 1: {
+                if (resultCode == RESULT_OK) {
+                    extractZipFile();
+                    callOnlineActivity();
+                }
+                break;
+            }
         }
     }
 }

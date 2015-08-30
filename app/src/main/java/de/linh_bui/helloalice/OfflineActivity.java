@@ -12,23 +12,19 @@ import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageButton;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Locale;
 
-public class MainActivity extends Activity implements TextToSpeech.OnInitListener {
+public class OfflineActivity extends Activity implements TextToSpeech.OnInitListener {
     private ModBot alice;
     private ModChat chatSession;
     private Intent botData;
-    private Intent chatData;
     private ImageButton btnSpeak;
     private TextToSpeech tts;
     private TextView txtSpeechInput;
-    private TextView txtChat;
-    private ProgressBar progressBar;
     private final int REQ_CODE_SPEECH_INPUT = 100;
 
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,14 +72,6 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
     private void initializeBot(){
         Intent i = new Intent(this, LoadBot.class);
         startActivityForResult(i, 1);
-    }
-
-    @Deprecated
-    private void initializeChat(){
-        Intent i = new Intent(this, LoadChat.class);
-        i.putExtra("botName", alice.name);
-        i.putExtra("path", alice.root_path);
-        startActivityForResult(i, 2);
     }
 
     private void loadBot(){
@@ -153,13 +141,6 @@ public class MainActivity extends Activity implements TextToSpeech.OnInitListene
                 if (resultCode == RESULT_OK) {
                     this.botData = data;
                     loadBot();
-                }
-                break;
-            }
-            case 2: {
-                if(resultCode == RESULT_OK){
-                    this.chatData = data;
-                    loadChat();
                 }
                 break;
             }
