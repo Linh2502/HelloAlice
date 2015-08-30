@@ -7,10 +7,12 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.speech.tts.TextToSpeech;
-import android.util.Log;
 
 import java.io.File;
 import java.util.Locale;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by Linh on 18.08.15.
@@ -18,19 +20,27 @@ import java.util.Locale;
 public class PreActivity extends Activity implements TextToSpeech.OnInitListener{
     private String path;
     private TextToSpeech tts;
+    private static final ScheduledExecutorService worker =
+            Executors.newSingleThreadScheduledExecutor();
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_progress);
         path = getExternalFilesDir(null).getAbsolutePath();
         ttsInit();
-        checkConnectionToInternet();
+        Runnable task = new Runnable() {
+            public void run() {
+                checkConnectionToInternet();
+            }
+        };
+        worker.schedule(task, 3, TimeUnit.SECONDS);
     }
 
     protected void checkConnectionToInternet(){
         if(isOnline()){
             downloadZip();
         } else {
+            checkExistingZipFolder(false);
             callOfflineActivity();
         }
     }
@@ -46,17 +56,21 @@ public class PreActivity extends Activity implements TextToSpeech.OnInitListener
         startActivityForResult(syncData, 1);
     }
 
-    private void extractZipFile() {
+    private void checkExistingZipFolder(Boolean bool){
         File fileExt = new File(path + "/bots");
-        Log.d("ZIP", "Check Folder if exists" + path + " and " + fileExt.exists());
-        if (!fileExt.exists()) {
-            ZipFileExtraction extract = new ZipFileExtraction();
-            Log.d("ZIP", "Not existing, extracting Zip");
-            try {
-                extract.unZipIt(getAssets().open("bots.zip"), getExternalFilesDir(null).getAbsolutePath() + "/");
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+        if(bool){
+            extractZipFile();
+        } else if (!fileExt.exists()) {
+            extractZipFile();
+        }
+    }
+
+    private void extractZipFile() {
+        ZipFileExtraction extract = new ZipFileExtraction();
+        try {
+            extract.unZipIt(getAssets().open("bots.zip"), getExternalFilesDir(null).getAbsolutePath() + "/");
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -85,11 +99,7 @@ public class PreActivity extends Activity implements TextToSpeech.OnInitListener
                 installIntent.setAction(
                         TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA);
                 startActivity(installIntent);
-                Log.e("TTS", "This Language is not supported");
-            } else {
             }
-        } else {
-            Log.e("TTS", "Initialization Failed!");
         }
     }
 
@@ -97,8 +107,11 @@ public class PreActivity extends Activity implements TextToSpeech.OnInitListener
         super.onActivityResult(requestCode, resultCode, data);
         switch (requestCode) {
             case 1: {
-                if (resultCode == RESULT_OK) {
-                    extractZipFile();
+                if (resultCode == RESULT_CANCELED) {
+                    checkExistingZipFolder(false);
+                    callOnlineActivity();
+                } else if (resultCode == RESULT_OK) {
+                    checkExistingZipFolder(true);
                     callOnlineActivity();
                 }
                 break;
